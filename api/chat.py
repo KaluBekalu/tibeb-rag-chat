@@ -24,7 +24,9 @@ QUOTA_MESSAGE = (
     "or reach out directly via tibeblabs.com."
 )
 
-DEFAULT_ORIGINS = "https://tibeblabs.com,https://www.tibeblabs.com"
+DEFAULT_ORIGINS = (
+    "https://tibeblabs.com,https://www.tibeblabs.com,https://kalkidan.tibeblabs.com"
+)
 ALLOWED_ORIGINS = [
     o.strip() for o in os.environ.get("ALLOWED_ORIGINS", DEFAULT_ORIGINS).split(",") if o.strip()
 ]
