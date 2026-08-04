@@ -14,6 +14,7 @@ def test_site_context_maps_known_hostnames():
     assert site_context("www.tibeblabs.com")["name"] == "Tibeb Labs"
     assert site_context("kalkidan.tibeblabs.com")["name"] == "Kalkidan's portfolio"
     assert site_context("mebrek.tibeblabs.com")["name"] == "Mebrek"
+    assert site_context("notes.tibeblabs.com")["name"] == "Ronen Notes"
 
 
 def test_site_context_unknown_hostname_returns_none():

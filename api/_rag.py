@@ -73,7 +73,7 @@ SITES = {
         "name": "Mebrek",
         "blurb": "the product site for Mebrek, a serverless disposable-email service with auto-expiring inboxes (built by Kalkidan / Tibeb Labs)",
     },
-    "ronen.tibeblabs.com": {
+    "notes.tibeblabs.com": {
         "name": "Ronen Notes",
         "blurb": "the product site for Ronen Notes, a collaborative note-sharing app with threaded comments and no signup (built by Kalkidan / Tibeb Labs)",
     },

@@ -33,9 +33,9 @@ A temporary email service with auto-expiring inboxes.
 
 ## Notable client work
 
-- **Health & fitness platform (Chicago, USA)** — React, AWS, Twilio IVR automation.
+- **Health & fitness platform (Chicago, USA - Employed to SMYL Fitness)** — React, AWS, Twilio IVR automation.
 - **Multi-shop retail system (Addis Ababa, Ethiopia)** — Next.js, PostgreSQL.
-- **Property marketplace (USA)** — Node.js, Fastify, listings API.
+- **Property marketplace (Addis Ababa, Ethiopia)** — Node.js, Fastify, listings API.
 - **Community engagement app (Ethiopia)** — React Native, bilingual, offline-tolerant.
 
 ## Team
