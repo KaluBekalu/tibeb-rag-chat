@@ -20,6 +20,35 @@ from chat import (
 )
 
 
+def test_canned_answer_matches_with_normalization(tmp_path, monkeypatch):
+    import json
+
+    import chat
+
+    canned_file = tmp_path / "canned.json"
+    canned_file.write_text(json.dumps({
+        "what's kalkidan's experience with ai and llms": {
+            "answer": "canned!", "sources": ["resume"]
+        }
+    }))
+    monkeypatch.setattr(chat, "CANNED_PATH", canned_file)
+    monkeypatch.setattr(chat, "_CANNED", None)
+
+    hit = chat.canned_answer("  What's Kalkidan's experience with AI and LLMs?  ")
+    assert hit == {"answer": "canned!", "sources": ["resume"]}
+    assert chat.canned_answer("Something else entirely?") is None
+
+
+def test_canned_answer_survives_missing_file(monkeypatch):
+    from pathlib import Path
+
+    import chat
+
+    monkeypatch.setattr(chat, "CANNED_PATH", Path("/nonexistent/canned.json"))
+    monkeypatch.setattr(chat, "_CANNED", None)
+    assert chat.canned_answer("anything") is None
+
+
 def test_origin_hostname_extraction():
     assert origin_hostname("https://loopcam.tibeblabs.com") == "loopcam.tibeblabs.com"
     assert origin_hostname("http://localhost:3000") == "localhost"
@@ -41,6 +70,15 @@ def test_gen_chain_with_groq_key_appends_groq_as_last_resort():
 def test_gen_models_contain_no_zero_quota_20_models():
     # 2.0 models have 0 free-tier quota now (verified in AI Studio dashboard)
     assert not any(m.startswith("gemini-2.0") for m in GEN_MODELS)
+
+
+def test_generate_with_fallback_falls_through_on_503_unavailable():
+    def gen(model):
+        if model == "a":
+            raise Boom("503 UNAVAILABLE. This model is currently experiencing high demand.")
+        return f"ans-{model}"
+
+    assert generate_with_fallback(["a", "b"], gen) == "ans-b"
 
 
 def test_generate_with_fallback_falls_through_on_empty_answer():
@@ -89,16 +127,16 @@ def test_generate_with_fallback_raises_last_429_when_all_exhausted():
         generate_with_fallback(["a", "b"], gen)
 
 
-def test_generate_with_fallback_reraises_non_429_immediately():
+def test_generate_with_fallback_reraises_permanent_errors_immediately():
     calls = []
 
     def gen(model):
         calls.append(model)
-        raise Boom("500 internal")
+        raise Boom("400 INVALID_ARGUMENT: bad request")
 
     with pytest.raises(Boom):
         generate_with_fallback(["a", "b"], gen)
-    assert calls == ["a"]  # no pointless fallback on non-quota errors
+    assert calls == ["a"]  # no pointless fallback on permanent errors
 
 
 def test_origin_allowed_for_listed_origins():

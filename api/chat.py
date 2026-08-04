@@ -10,6 +10,7 @@ import os
 import re
 import sys
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(__file__))  # allow `_rag` import when loaded as `api.chat`
 from _rag import build_prompt, cosine_topk, load_index, site_context  # noqa: E402
@@ -62,6 +63,26 @@ ALLOWED_ORIGINS = [
 _INDEX = None  # cached across warm invocations
 _CLIENT = None
 
+# Pre-generated answers for the suggestion pills: the most common questions
+# cost zero tokens and return instantly — quota armor for traffic spikes.
+CANNED_PATH = Path(__file__).parent.parent / "data" / "canned.json"
+_CANNED = None
+
+
+def _normalize(q: str) -> str:
+    return re.sub(r"\s+", " ", q.lower().strip().rstrip("?!. "))
+
+
+def canned_answer(question: str) -> dict | None:
+    global _CANNED
+    if _CANNED is None:
+        try:
+            with open(CANNED_PATH) as f:
+                _CANNED = {_normalize(k): v for k, v in json.load(f).items()}
+        except OSError:
+            _CANNED = {}
+    return _CANNED.get(_normalize(question))
+
 
 def origin_allowed(origin: str | None, allowed: list[str]) -> bool:
     """Exact-match against the allow-list; localhost on any port is fine."""
@@ -81,6 +102,12 @@ def _is_quota_error(e: Exception) -> bool:
     return "RESOURCE_EXHAUSTED" in s or "429" in s
 
 
+def _is_transient_error(e: Exception) -> bool:
+    """Overload/availability blips — the next rung should get a shot."""
+    s = str(e)
+    return "UNAVAILABLE" in s or "503" in s or "500" in s or "overloaded" in s.lower()
+
+
 def parse_retry_seconds(error_text: str) -> float | None:
     """Pull the server-suggested retry delay out of a 429 message, if any."""
     m = re.search(r"retry in ([\d.]+)s", error_text, re.IGNORECASE)
@@ -90,15 +117,15 @@ def parse_retry_seconds(error_text: str) -> float | None:
 def generate_with_fallback(models: list[str], generate):
     """Call generate(model) down the chain.
 
-    Quota errors and empty answers fall through to the next model; anything
-    else re-raises immediately.
+    Quota errors, transient 5xx blips, and empty answers fall through to the
+    next model; anything else re-raises immediately.
     """
     last = None
     for model in models:
         try:
             return generate(model)
         except Exception as e:
-            if not (_is_quota_error(e) or isinstance(e, EmptyAnswer)):
+            if not (_is_quota_error(e) or _is_transient_error(e) or isinstance(e, EmptyAnswer)):
                 raise
             last = e
     raise last
@@ -187,6 +214,7 @@ def _groq_generate(prompt: str) -> str:
         headers={
             "Authorization": f"Bearer {os.environ['GROQ_API_KEY']}",
             "Content-Type": "application/json",
+            "User-Agent": "tibeb-chat/1.0",  # Groq's edge 403s python-urllib's default UA
         },
     )
     try:
@@ -235,6 +263,10 @@ class handler(BaseHTTPRequestHandler):
         ok, result = validate_question(body)
         if not ok:
             return self._send(400, {"error": result}, origin)
+
+        canned = canned_answer(result)
+        if canned:
+            return self._send(200, canned, origin)
 
         try:
             site = site_context(origin_hostname(origin))

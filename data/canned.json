@@ -1,0 +1,46 @@
+{
+ "What's Kalkidan's experience with AI and LLMs?": {
+  "answer": "Kalkidan is an AI-native engineer who integrates **LLM-powered features** using the Anthropic Claude and OpenAI GPT APIs. His specific hands-on experience includes:\n\n- Building **real-time voice agents** that combine speech-to-text, model reasoning, and text-to-speech with structured post-session summaries.\n- Implementing **RAG (Retrieval-Augmented Generation)**, MCP, and agentic coding workflows.\n- Utilizing coding agents like **Claude Code and Cursor** in his daily development process.\n- Developing and shipping AI features for products through his studio, Tibeb Labs.\n\nHe balances this technical expertise with the product judgment to know when to utilize models and when to solve problems with traditional engineering.",
+  "sources": [
+   "projects",
+   "resume"
+  ]
+ },
+ "What products has he built and monetized?": {
+  "answer": "Kalkidan has built and monetized **LoopCam**, a native macOS virtual camera app. He designed, built, and shipped it solo and end-to-end, and it has real paying customers through a freemium model with a paid Pro tier.",
+  "sources": [
+   "faqs",
+   "projects",
+   "resume"
+  ]
+ },
+ "Tell me about his enterprise work at Kimberly-Clark": {
+  "answer": "At Kimberly-Clark, where he worked from November 2022 to February 2025, Kalkidan served as a **Full-Stack Developer** in a remote contract capacity. His key contributions included:\n\n- Building enterprise **React**, **Next.js**, and **TypeScript** applications that served over 2,000 users.\n- Creating reusable component libraries and establishing frontend standards that were adopted across multiple teams.\n- Reducing API response times by approximately 30% through query optimization.\n- Improving load and render performance by implementing code splitting, lazy loading, and state-management refinements.",
+  "sources": [
+   "projects",
+   "resume"
+  ]
+ },
+ "What's his frontend & design-system experience?": {
+  "answer": "Kalkidan is a senior engineer with deep expertise in building modern, performant frontends and reusable design systems.\n\nHis experience includes:\n\n- **Design Systems:** At SMYL Fitness Rx, he built and maintains a reusable component library using **Tailwind**, **shadcn/ui**, and **Radix UI** that serves as the company's shared design system. He also established frontend standards and component libraries at Kimberly-Clark that were adopted across multiple teams.\n- **Core Technologies:** He is highly proficient in **TypeScript**, **React 18/19**, **Next.js**, and **Vue.js**.\n- **Performance & Quality:** He specializes in optimizing load and render performance through code splitting, lazy loading, and state-management refinements. He is also skilled in **accessibility (WCAG/ARIA)**, responsive mobile-first UI, and end-to-end testing with **Playwright**.\n- **Tooling:** He leverages **Vite**, **TanStack Query**, **MUI**, and **Tailwind CSS** to build consumer-facing and enterprise applications serving thousands of users.\n\nFor more details, you can reach him at kalkidan.aleme@yahoo.com or visit tibeblabs.com.",
+  "sources": [
+   "projects",
+   "resume"
+  ]
+ },
+ "Has he built native macOS apps?": {
+  "answer": "Yes, Kalkidan has built native macOS apps. He is the founder of Tibeb Labs and designed, built, and monetized **LoopCam**, a native macOS app. LoopCam is a native macOS virtual camera in Swift, utilizing CoreMediaIO system extensions and a CoreAudio mic driver.",
+  "sources": [
+   "faqs",
+   "projects",
+   "resume"
+  ]
+ },
+ "Is he open to new opportunities?": {
+  "answer": "The best way to find out if Kalkidan is open to new opportunities is to reach out directly:\n- Email: kalkidan.aleme@yahoo.com\n- LinkedIn: linkedin.com/in/kalkidanaleme",
+  "sources": [
+   "faqs",
+   "resume"
+  ]
+ }
+}
