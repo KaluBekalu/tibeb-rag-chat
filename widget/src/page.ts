@@ -10,9 +10,11 @@ const API_URL = "/api/chat";
 
 const SUGGESTIONS = [
   "What's Kalkidan's experience with AI and LLMs?",
-  "Has Kalkidan worked at large companies?",
-  "What has Kalkidan built and shipped?",
-  "How can I get in touch with Kalkidan?",
+  "What products has he built and monetized?",
+  "Tell me about his enterprise work at Kimberly-Clark",
+  "What's his frontend & design-system experience?",
+  "Has he built native macOS apps?",
+  "Is he open to new opportunities?",
 ];
 
 const app = document.getElementById("app") as HTMLDivElement;
