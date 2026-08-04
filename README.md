@@ -2,10 +2,10 @@
 
 A retrieval-augmented chatbot for [tibeblabs.com](https://tibeblabs.com) that recruiters and visitors can ask about Tibeb Labs' products, services, pricing — and about my skills, experience, and career. Ships as a **one-line embeddable widget** plus a standalone demo page, and runs entirely on free tiers: **$0/month**.
 
-**Live demo:** _coming after deploy_ · **Embed it:**
+**Live demo:** https://rag-proj-nine.vercel.app · **Embed it:**
 
 ```html
-<script src="https://<deployment>/widget.js" data-api="https://<deployment>/api/chat" defer></script>
+<script src="https://rag-proj-nine.vercel.app/widget.js" data-api="https://rag-proj-nine.vercel.app/api/chat" defer></script>
 ```
 
 ## Architecture
