@@ -36,6 +36,9 @@ function resolveTheme(): "light" | "dark" {
   return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+// data-offset lifts the bubble above host-page bottom furniture (CTA bars etc.)
+const OFFSET = parseInt(script?.dataset.offset ?? "24", 10) || 24;
+
 const DARK = resolveTheme() === "dark";
 const P = DARK
   ? { panel: "#17141f", log: "#100d16", botBg: "#1e1a29", botBorder: "#2e2840",
@@ -54,7 +57,7 @@ const STYLES = `
   :host { all: initial; }
   * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   .bubble {
-    position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px;
+    position: fixed; bottom: ${OFFSET}px; right: 24px; width: 56px; height: 56px;
     border-radius: 50%; border: none; cursor: pointer; z-index: 999999;
     background: ${ACCENT}; color: #fff; font-size: 26px; line-height: 1;
     box-shadow: 0 4px 16px rgba(0,0,0,.25); transition: transform .15s;
@@ -62,8 +65,8 @@ const STYLES = `
   }
   .bubble:hover { transform: scale(1.08); }
   .panel {
-    position: fixed; bottom: 92px; right: 24px; width: 360px; max-width: calc(100vw - 32px);
-    height: 480px; max-height: calc(100vh - 120px); z-index: 999999;
+    position: fixed; bottom: ${OFFSET + 68}px; right: 24px; width: 360px; max-width: calc(100vw - 32px);
+    height: 480px; max-height: calc(100vh - ${OFFSET + 96}px); z-index: 999999;
     background: ${P.panel}; border-radius: 16px; overflow: hidden;
     box-shadow: 0 12px 40px rgba(0,0,0,${DARK ? ".55" : ".3"});
     ${DARK ? `border: 1px solid ${P.botBorder};` : ""}
