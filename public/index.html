@@ -3,45 +3,91 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tibeb Chat — RAG chatbot demo</title>
-  <meta name="description" content="A $0 RAG chatbot for tibeblabs.com — ask about Tibeb Labs' projects and Kalkidan Aleme's experience.">
+  <title>Tibeb Chat — ask about Tibeb Labs & Kalkidan Aleme</title>
+  <meta name="description" content="A $0 RAG chatbot — ask about Tibeb Labs' projects and Kalkidan Aleme's experience.">
   <style>
-    :root { --accent: #6d28d9; }
-    * { box-sizing: border-box; margin: 0; }
+    :root {
+      --bg: #131019; --panel: #1c1826; --line: #2c2639;
+      --text: #ece8f6; --dim: #9a90b8; --accent: #7c3aed; --accent-soft: #8b5cf6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(160deg, #16121f 0%, #241a38 100%);
-      color: #eae6f5; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+      background: var(--bg); color: var(--text);
     }
-    main { max-width: 640px; }
-    .tag { color: #b6a8e8; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; }
-    h1 { font-size: clamp(28px, 5vw, 44px); margin: 12px 0 16px; line-height: 1.15; }
-    h1 em { color: #b393ff; font-style: normal; }
-    p { color: #c6bfdd; line-height: 1.6; margin-bottom: 12px; }
-    .how {
-      margin-top: 28px; padding: 18px 20px; border: 1px solid #3b3155;
-      border-radius: 14px; background: rgba(255,255,255,.03); font-size: 14px;
+    #app { display: flex; flex-direction: column; height: 100dvh; }
+
+    .top {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid var(--line);
+      background: rgba(19,16,25,.85); backdrop-filter: blur(8px);
     }
-    .how b { color: #d9cffa; }
-    code { background: #322a49; border-radius: 6px; padding: 2px 6px; font-size: 13px; color: #d7ccf7; }
-    .hint { margin-top: 24px; color: #9a8fc0; font-size: 14px; }
-    a { color: #b393ff; }
+    .brand { font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+    .brand span { color: var(--accent-soft); }
+    .gh { color: var(--dim); text-decoration: none; font-size: 13px; }
+    .gh:hover { color: var(--text); }
+
+    .scroll { flex: 1; overflow-y: auto; }
+    .thread { max-width: 760px; margin: 0 auto; padding: 24px 16px 12px; }
+
+    .hero { text-align: center; padding: 9vh 8px 0; }
+    .hero h1 { font-size: clamp(26px, 4.5vw, 40px); line-height: 1.2; margin-bottom: 14px; }
+    .hero h1 em { color: var(--accent-soft); font-style: normal; }
+    .hero p { color: var(--dim); max-width: 480px; margin: 0 auto 28px; line-height: 1.55; font-size: 15px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .chip {
+      background: var(--panel); color: var(--text); border: 1px solid var(--line);
+      border-radius: 999px; padding: 9px 16px; font-size: 13.5px; cursor: pointer;
+      transition: border-color .15s, transform .15s;
+    }
+    .chip:hover { border-color: var(--accent-soft); transform: translateY(-1px); }
+
+    .row { display: flex; gap: 12px; margin: 18px 0; }
+    .row.user { justify-content: flex-end; }
+    .row.user .body {
+      background: var(--accent); color: #fff; border-radius: 18px 18px 4px 18px;
+      padding: 11px 16px; max-width: 78%;
+    }
+    .row.bot .body { max-width: 90%; padding-top: 4px; }
+    .avatar {
+      flex: 0 0 30px; height: 30px; border-radius: 8px; background: var(--accent);
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 700; margin-top: 2px;
+    }
+    .text { line-height: 1.65; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; }
+    .text.thinking { color: var(--dim); animation: pulse 1.2s ease-in-out infinite; }
+    @keyframes pulse { 50% { opacity: .45; } }
+    .sources { display: flex; gap: 6px; margin-top: 10px; }
+    .sources span {
+      font-size: 11px; color: var(--dim); background: var(--panel);
+      border: 1px solid var(--line); border-radius: 8px; padding: 2px 9px;
+    }
+
+    .composer { padding: 8px 16px 18px; background: linear-gradient(transparent, var(--bg) 30%); }
+    .composer form {
+      max-width: 760px; margin: 0 auto; display: flex; align-items: flex-end; gap: 10px;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 22px;
+      padding: 10px 10px 10px 18px; transition: border-color .15s;
+    }
+    .composer form:focus-within { border-color: var(--accent-soft); }
+    textarea {
+      flex: 1; background: none; border: none; outline: none; resize: none;
+      color: var(--text); font: inherit; font-size: 15px; line-height: 1.5; max-height: 160px;
+    }
+    textarea::placeholder { color: var(--dim); }
+    #send {
+      flex: 0 0 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer;
+      background: var(--accent); color: #fff; font-size: 17px;
+      display: flex; align-items: center; justify-content: center; transition: opacity .15s;
+    }
+    #send:disabled { opacity: .4; cursor: default; }
+    .fine { text-align: center; color: #6f6690; font-size: 12px; margin-top: 10px; }
+    .fine a { color: inherit; }
   </style>
 </head>
 <body>
-  <main>
-    <div class="tag">Live demo</div>
-    <h1>Chat with <em>Tibeb Labs</em> — a $0 RAG chatbot</h1>
-    <p>Ask about Tibeb Labs' products (LoopCam, Guaro, Ronen Notes, Mebrek), services and pricing — or about founder <a href="https://tibeblabs.com">Kalkidan Aleme</a>'s skills and experience. Recruiters welcome.</p>
-    <div class="how">
-      <b>How it works:</b> curated markdown → chunked & embedded with
-      <code>gemini-embedding-001</code> → committed to the repo as a static index →
-      per-question in-memory cosine retrieval → grounded answer from
-      <code>gemini-2.5-flash-lite</code>, with source citations. No vector database —
-      at this corpus size, that's a feature, not a shortcut.
-    </div>
-    <p class="hint">👉 Click the chat bubble in the corner and ask something like <i>"What is LoopCam?"</i> or <i>"What's Kalkidan's experience with AI?"</i></p>
-  </main>
-  <script src="/widget.js" data-api="/api/chat" defer></script>
+  <div id="app"></div>
+  <script src="/app.js" defer></script>
 </body>
 </html>

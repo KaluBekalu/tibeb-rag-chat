@@ -1,18 +1,13 @@
 import * as esbuild from "esbuild";
 
-const opts = {
-  entryPoints: ["widget/src/widget.ts"],
-  bundle: true,
-  minify: true,
-  format: "iife",
-  target: "es2019",
-  outfile: "public/widget.js",
-  logLevel: "info",
-};
+const shared = { bundle: true, minify: true, format: "iife", target: "es2019", logLevel: "info" };
+const targets = [
+  { ...shared, entryPoints: ["widget/src/widget.ts"], outfile: "public/widget.js" },
+  { ...shared, entryPoints: ["widget/src/page.ts"], outfile: "public/app.js" },
+];
 
 if (process.argv.includes("--watch")) {
-  const ctx = await esbuild.context(opts);
-  await ctx.watch();
+  for (const t of targets) await (await esbuild.context(t)).watch();
 } else {
-  await esbuild.build(opts);
+  for (const t of targets) await esbuild.build(t);
 }
