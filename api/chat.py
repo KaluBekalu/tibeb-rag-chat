@@ -37,7 +37,11 @@ EMBED_MODEL = "gemini-embedding-001"
 EMBED_DIMS = 768
 TOP_K = 8
 MAX_QUESTION_CHARS = 500
-MAX_OUTPUT_TOKENS = 500  # keep well inside Vercel Hobby's 10s limit
+# Gemini 3.x count THINKING tokens against max_output_tokens — a 500 budget
+# gets eaten by thinking and truncates answers mid-sentence. 2048 leaves room
+# for thinking_level=low plus a full answer; the prompt keeps answers short.
+MAX_OUTPUT_TOKENS = 2048
+GROQ_MAX_TOKENS = 600  # no thinking tax on Groq
 
 BUSY_MESSAGE = (
     "I'm getting a lot of questions right now — give it a minute and ask again. "
@@ -178,7 +182,7 @@ def _groq_generate(prompt: str) -> str:
         data=json.dumps({
             "model": GROQ_MODEL.removeprefix("groq/"),
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": MAX_OUTPUT_TOKENS,
+            "max_tokens": GROQ_MAX_TOKENS,
         }).encode(),
         headers={
             "Authorization": f"Bearer {os.environ['GROQ_API_KEY']}",
