@@ -17,7 +17,7 @@ from _rag import build_prompt, cosine_topk, load_index  # noqa: E402
 GEN_MODEL = "gemini-2.5-flash-lite"  # 1,000 req/day free vs 250 for full Flash
 EMBED_MODEL = "gemini-embedding-001"
 EMBED_DIMS = 768
-TOP_K = 6
+TOP_K = 8
 MAX_QUESTION_CHARS = 500
 MAX_OUTPUT_TOKENS = 500  # keep well inside Vercel Hobby's 10s limit
 
