@@ -54,10 +54,54 @@ def cosine_topk(query_embedding: list[float], chunks: list[dict], k: int) -> lis
     return [chunks[i] for i in order]
 
 
-def build_prompt(question: str, retrieved: list[dict]) -> str:
+# Registry of sites the widget is embedded on. The API resolves the caller's
+# Origin hostname here so "this website" questions get answered in context.
+SITES = {
+    "tibeblabs.com": {
+        "name": "Tibeb Labs",
+        "blurb": "the website of Tibeb Labs, Kalkidan Aleme's independent software studio (services, products, client work)",
+    },
+    "kalkidan.tibeblabs.com": {
+        "name": "Kalkidan's portfolio",
+        "blurb": "Kalkidan Aleme's personal portfolio site showcasing his work and experience",
+    },
+    "loopcam.tibeblabs.com": {
+        "name": "LoopCam",
+        "blurb": "the product site for LoopCam, a native macOS virtual camera app that loops your video while you step away (built by Kalkidan / Tibeb Labs)",
+    },
+    "mebrek.tibeblabs.com": {
+        "name": "Mebrek",
+        "blurb": "the product site for Mebrek, a serverless disposable-email service with auto-expiring inboxes (built by Kalkidan / Tibeb Labs)",
+    },
+    "ronen.tibeblabs.com": {
+        "name": "Ronen Notes",
+        "blurb": "the product site for Ronen Notes, a collaborative note-sharing app with threaded comments and no signup (built by Kalkidan / Tibeb Labs)",
+    },
+    "tibebchat.tibeblabs.com": {
+        "name": "Tibeb Chat",
+        "blurb": "the standalone demo of this very chatbot — a $0 RAG project Kalkidan built to showcase his AI engineering",
+    },
+}
+SITES["www.tibeblabs.com"] = SITES["tibeblabs.com"]
+
+
+def site_context(hostname: str | None) -> dict | None:
+    """Resolve a hostname to its site registry entry, or None if unknown."""
+    return SITES.get(hostname) if hostname else None
+
+
+def build_prompt(question: str, retrieved: list[dict], site: dict | None = None) -> str:
     """Build a grounded prompt: context blocks with source labels + guardrail."""
     context = "\n\n".join(f"[{c['source']}]\n{c['text']}" for c in retrieved)
-    return (
+    site_block = (
+        "You are currently embedded on "
+        f"{site['name']} — {site['blurb']}. When the visitor says \"this "
+        "website\", \"this site\", \"this app\", or \"this product\", they mean "
+        f"{site['name']}. Prioritize information about it.\n\n"
+        if site
+        else ""
+    )
+    return site_block + (
         "You are Kalkidan Aleme's personal assistant, embedded on his portfolio "
         "and project sites. Kalkidan is a senior full-stack / product engineer; "
         "Tibeb Labs is his independent side studio. You answer questions from "

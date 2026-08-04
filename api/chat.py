@@ -12,7 +12,7 @@ import sys
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.dirname(__file__))  # allow `_rag` import when loaded as `api.chat`
-from _rag import build_prompt, cosine_topk, load_index  # noqa: E402
+from _rag import build_prompt, cosine_topk, load_index, site_context  # noqa: E402
 
 # Fallback chain: each Gemini model has its own free-tier bucket (~20 req/DAY
 # each as of Aug 2026 — verified in AI Studio; 2.0 models now have zero free
@@ -100,6 +100,14 @@ def generate_with_fallback(models: list[str], generate):
     raise last
 
 
+def origin_hostname(origin: str | None) -> str | None:
+    """Hostname of an Origin header value, or None if absent/malformed."""
+    if not origin:
+        return None
+    m = re.match(r"https?://([^/:]+)", origin)
+    return m.group(1) if m else None
+
+
 def validate_question(body: dict) -> tuple[bool, str]:
     """Return (ok, question-or-error)."""
     q = body.get("question")
@@ -111,7 +119,7 @@ def validate_question(body: dict) -> tuple[bool, str]:
     return True, q
 
 
-def _answer(question: str) -> dict:
+def _answer(question: str, site: dict | None = None) -> dict:
     """Embed -> retrieve -> generate. Imports/creates clients lazily."""
     global _INDEX, _CLIENT
     from google import genai
@@ -122,16 +130,19 @@ def _answer(question: str) -> dict:
     if _INDEX is None:
         _INDEX = load_index()
 
+    # Bias retrieval toward the embedding site: "what is this website?" asked
+    # on loopcam.tibeblabs.com should pull LoopCam chunks.
+    query = f"{question} (asked on the {site['name']} site)" if site else question
     query_emb = _CLIENT.models.embed_content(
         model=EMBED_MODEL,
-        contents=question,
+        contents=query,
         config=types.EmbedContentConfig(
             task_type="RETRIEVAL_QUERY", output_dimensionality=EMBED_DIMS
         ),
     ).embeddings[0].values
 
     retrieved = cosine_topk(query_emb, _INDEX, k=TOP_K)
-    prompt = build_prompt(question, retrieved)
+    prompt = build_prompt(question, retrieved, site=site)
 
     def generate(model: str) -> str:
         if model == GROQ_MODEL:
@@ -222,7 +233,8 @@ class handler(BaseHTTPRequestHandler):
             return self._send(400, {"error": result}, origin)
 
         try:
-            return self._send(200, _answer(result), origin)
+            site = site_context(origin_hostname(origin))
+            return self._send(200, _answer(result, site=site), origin)
         except Exception as e:  # keep the widget graceful, log for Vercel
             print(f"chat error: {type(e).__name__}: {e}")
             if _is_quota_error(e):

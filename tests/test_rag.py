@@ -5,7 +5,34 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "api"))
 
-from _rag import build_prompt, chunk, cosine_topk, load_index
+from _rag import build_prompt, chunk, cosine_topk, load_index, site_context
+
+
+def test_site_context_maps_known_hostnames():
+    assert site_context("loopcam.tibeblabs.com")["name"] == "LoopCam"
+    assert site_context("tibeblabs.com")["name"] == "Tibeb Labs"
+    assert site_context("www.tibeblabs.com")["name"] == "Tibeb Labs"
+    assert site_context("kalkidan.tibeblabs.com")["name"] == "Kalkidan's portfolio"
+    assert site_context("mebrek.tibeblabs.com")["name"] == "Mebrek"
+
+
+def test_site_context_unknown_hostname_returns_none():
+    assert site_context("evil.com") is None
+    assert site_context("") is None
+    assert site_context(None) is None
+
+
+def test_build_prompt_with_site_grounds_this_website_questions():
+    site = site_context("loopcam.tibeblabs.com")
+    prompt = build_prompt("What is this website about?", [], site=site)
+    assert "LoopCam" in prompt
+    # deictic references must be anchored to the current site
+    assert "this website" in prompt.lower() or "this site" in prompt.lower()
+
+
+def test_build_prompt_without_site_unchanged():
+    prompt = build_prompt("What is LoopCam?", [])
+    assert "Question: What is LoopCam?" in prompt
 
 
 def test_load_index_reads_chunks_regardless_of_cwd(tmp_path, monkeypatch):

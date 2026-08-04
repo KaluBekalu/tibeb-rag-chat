@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "api"))
 import pytest
 
 from chat import (
+    origin_hostname,
     EmptyAnswer,
     GEN_MODELS,
     GROQ_MODEL,
@@ -17,6 +18,13 @@ from chat import (
     parse_retry_seconds,
     validate_question,
 )
+
+
+def test_origin_hostname_extraction():
+    assert origin_hostname("https://loopcam.tibeblabs.com") == "loopcam.tibeblabs.com"
+    assert origin_hostname("http://localhost:3000") == "localhost"
+    assert origin_hostname(None) is None
+    assert origin_hostname("garbage") is None
 
 
 def test_gen_chain_without_groq_key_is_gemini_only():
