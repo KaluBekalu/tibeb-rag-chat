@@ -1,4 +1,4 @@
-# Tibeb Chat — a $0 RAG chatbot you can drop on any site
+# Tibeb Chat - a $0 RAG chatbot you can drop on any site
 
 A retrieval-augmented chatbot for [tibeblabs.com](https://tibeblabs.com) that recruiters and visitors can ask about Tibeb Labs' products, services, pricing — and about my skills, experience, and career. Ships as a **one-line embeddable widget** plus a standalone demo page, and runs entirely on free tiers: **$0/month**.
 
