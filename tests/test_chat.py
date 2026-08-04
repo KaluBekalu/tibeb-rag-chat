@@ -5,7 +5,58 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "api"))
 
-from chat import origin_allowed, validate_question
+import pytest
+
+from chat import generate_with_fallback, origin_allowed, parse_retry_seconds, validate_question
+
+
+class Boom(Exception):
+    pass
+
+
+def test_parse_retry_seconds_from_429_message():
+    err = "429 RESOURCE_EXHAUSTED ... Please retry in 30.371667014s."
+    assert parse_retry_seconds(str(err)) == pytest.approx(30.37, abs=0.01)
+
+
+def test_parse_retry_seconds_absent_returns_none():
+    assert parse_retry_seconds("500 something else broke") is None
+
+
+def test_generate_with_fallback_uses_first_model_when_healthy():
+    calls = []
+    result = generate_with_fallback(["a", "b"], lambda m: calls.append(m) or f"ans-{m}")
+    assert result == "ans-a"
+    assert calls == ["a"]
+
+
+def test_generate_with_fallback_falls_through_on_429():
+    def gen(model):
+        if model in ("a", "b"):
+            raise Boom("429 RESOURCE_EXHAUSTED retry in 30s")
+        return f"ans-{model}"
+
+    assert generate_with_fallback(["a", "b", "c"], gen) == "ans-c"
+
+
+def test_generate_with_fallback_raises_last_429_when_all_exhausted():
+    def gen(model):
+        raise Boom(f"429 RESOURCE_EXHAUSTED {model}")
+
+    with pytest.raises(Boom):
+        generate_with_fallback(["a", "b"], gen)
+
+
+def test_generate_with_fallback_reraises_non_429_immediately():
+    calls = []
+
+    def gen(model):
+        calls.append(model)
+        raise Boom("500 internal")
+
+    with pytest.raises(Boom):
+        generate_with_fallback(["a", "b"], gen)
+    assert calls == ["a"]  # no pointless fallback on non-quota errors
 
 
 def test_origin_allowed_for_listed_origins():

@@ -14,16 +14,23 @@ from http.server import BaseHTTPRequestHandler
 sys.path.insert(0, os.path.dirname(__file__))  # allow `_rag` import when loaded as `api.chat`
 from _rag import build_prompt, cosine_topk, load_index  # noqa: E402
 
-GEN_MODEL = "gemini-2.5-flash-lite"  # 1,000 req/day free vs 250 for full Flash
+# Fallback chain: each model has its own free-tier quota bucket, so bursts
+# that throttle one model (~20 req/min) roll over to the next instead of
+# failing. Only 2.5+ models accept a thinking budget.
+GEN_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"]
 EMBED_MODEL = "gemini-embedding-001"
 EMBED_DIMS = 768
 TOP_K = 8
 MAX_QUESTION_CHARS = 500
 MAX_OUTPUT_TOKENS = 500  # keep well inside Vercel Hobby's 10s limit
 
+BUSY_MESSAGE = (
+    "I'm getting a lot of questions right now — give it a minute and ask again. "
+    "Or reach out directly: kalkidan.aleme@yahoo.com"
+)
 QUOTA_MESSAGE = (
     "I've hit my daily free-tier limit — please try again tomorrow, "
-    "or reach out directly via tibeblabs.com."
+    "or reach out directly: kalkidan.aleme@yahoo.com"
 )
 
 DEFAULT_ORIGINS = (
@@ -48,6 +55,30 @@ def origin_allowed(origin: str | None, allowed: list[str]) -> bool:
     if re.fullmatch(r"https://[a-z0-9-]+(\.[a-z0-9-]+)*\.vercel\.app", origin):
         return True  # our own deployment/preview URLs (demo page)
     return origin in allowed
+
+
+def _is_quota_error(e: Exception) -> bool:
+    s = str(e)
+    return "RESOURCE_EXHAUSTED" in s or "429" in s
+
+
+def parse_retry_seconds(error_text: str) -> float | None:
+    """Pull the server-suggested retry delay out of a 429 message, if any."""
+    m = re.search(r"retry in ([\d.]+)s", error_text, re.IGNORECASE)
+    return float(m.group(1)) if m else None
+
+
+def generate_with_fallback(models: list[str], generate):
+    """Call generate(model) down the chain; only quota errors fall through."""
+    last = None
+    for model in models:
+        try:
+            return generate(model)
+        except Exception as e:
+            if not _is_quota_error(e):
+                raise
+            last = e
+    raise last
 
 
 def validate_question(body: dict) -> tuple[bool, str]:
@@ -81,14 +112,15 @@ def _answer(question: str) -> dict:
     ).embeddings[0].values
 
     retrieved = cosine_topk(query_emb, _INDEX, k=TOP_K)
-    response = _CLIENT.models.generate_content(
-        model=GEN_MODEL,
-        contents=build_prompt(question, retrieved),
-        config=types.GenerateContentConfig(
-            max_output_tokens=MAX_OUTPUT_TOKENS,
-            thinking_config=types.ThinkingConfig(thinking_budget=0),
-        ),
-    )
+    prompt = build_prompt(question, retrieved)
+
+    def generate(model: str):
+        config = types.GenerateContentConfig(max_output_tokens=MAX_OUTPUT_TOKENS)
+        if model.startswith("gemini-2.5"):  # 2.0 models reject thinking config
+            config.thinking_config = types.ThinkingConfig(thinking_budget=0)
+        return _CLIENT.models.generate_content(model=model, contents=prompt, config=config)
+
+    response = generate_with_fallback(GEN_MODELS, generate)
     return {
         "answer": response.text,
         "sources": sorted({c["source"] for c in retrieved}),
@@ -136,6 +168,9 @@ class handler(BaseHTTPRequestHandler):
             return self._send(200, _answer(result), origin)
         except Exception as e:  # keep the widget graceful, log for Vercel
             print(f"chat error: {type(e).__name__}: {e}")
-            if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
-                return self._send(200, {"answer": QUOTA_MESSAGE, "sources": []}, origin)
+            if _is_quota_error(e):
+                # short retry delay ⇒ per-minute throttle, not daily exhaustion
+                retry = parse_retry_seconds(str(e))
+                msg = BUSY_MESSAGE if retry is not None and retry < 120 else QUOTA_MESSAGE
+                return self._send(200, {"answer": msg, "sources": []}, origin)
             return self._send(500, {"error": "something went wrong"}, origin)
