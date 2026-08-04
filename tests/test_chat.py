@@ -22,6 +22,15 @@ def test_origin_allowed_rejects_unlisted_and_lookalike():
     assert not origin_allowed("", allowed)
 
 
+def test_origin_allowed_permits_vercel_app_deployments():
+    assert origin_allowed("https://rag-proj-nine.vercel.app", [])
+    assert origin_allowed("https://rag-proj-git-main-x.vercel.app", [])
+    # must be a real subdomain over https, not a lookalike
+    assert not origin_allowed("https://evil-vercel.app", [])
+    assert not origin_allowed("https://vercel.app.evil.com", [])
+    assert not origin_allowed("http://x.vercel.app", [])
+
+
 def test_origin_allowed_permits_localhost_any_port():
     assert origin_allowed("http://localhost:3000", ["https://tibeblabs.com"])
     assert origin_allowed("http://127.0.0.1:8000", ["https://tibeblabs.com"])
