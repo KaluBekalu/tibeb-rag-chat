@@ -10,6 +10,8 @@
  * leak in (and ours can't leak out).
  */
 
+import { renderAnswer } from "./format";
+
 interface Message {
   role: "user" | "bot";
   text: string;
@@ -19,10 +21,10 @@ interface Message {
 const script = document.currentScript as HTMLScriptElement;
 const API_URL = script?.dataset.api ?? "/api/chat";
 const ACCENT = script?.dataset.accent ?? "#6d28d9";
-const TITLE = script?.dataset.title ?? "Ask about Tibeb Labs & Kalkidan";
+const TITLE = script?.dataset.title ?? "Ask about Kalkidan & Tibeb Labs";
 const GREETING =
   script?.dataset.greeting ??
-  "Hi! I can answer questions about Tibeb Labs' projects, services, and Kalkidan's skills & experience. What would you like to know?";
+  "Hi! I can answer questions about Kalkidan's skills and experience, and about Tibeb Labs — his studio's products and services. What would you like to know?";
 
 const STYLES = `
   :host { all: initial; }
@@ -46,9 +48,15 @@ const STYLES = `
   .head { background: ${ACCENT}; color: #fff; padding: 14px 16px; font-size: 15px; font-weight: 600; }
   .head small { display: block; font-weight: 400; opacity: .85; font-size: 12px; margin-top: 2px; }
   .log { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: #f8f7fb; }
-  .msg { max-width: 85%; padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; word-wrap: break-word; }
-  .user { align-self: flex-end; background: ${ACCENT}; color: #fff; border-bottom-right-radius: 4px; }
+  .msg { max-width: 85%; padding: 9px 13px; border-radius: 14px; font-size: 14px; line-height: 1.45; word-wrap: break-word; }
+  .user { align-self: flex-end; background: ${ACCENT}; color: #fff; border-bottom-right-radius: 4px; white-space: pre-wrap; }
   .bot  { align-self: flex-start; background: #fff; color: #1f2430; border: 1px solid #e6e3ef; border-bottom-left-radius: 4px; }
+  .bot p { margin: 0 0 8px; }
+  .bot p:last-child, .bot ul:last-child { margin-bottom: 0; }
+  .bot ul { margin: 2px 0 8px 18px; padding: 0; }
+  .bot li { margin-bottom: 3px; }
+  .bot a { color: ${ACCENT}; text-underline-offset: 2px; }
+  .bot strong { color: #14101f; }
   .src  { align-self: flex-start; display: flex; gap: 6px; margin-top: -4px; }
   .src span { font-size: 11px; color: #6b6880; background: #edeaf5; border-radius: 8px; padding: 2px 8px; }
   .typing { align-self: flex-start; color: #8a86a0; font-size: 13px; padding: 4px 13px; }
@@ -98,7 +106,8 @@ function mount(): void {
   const add = (m: Message): void => {
     const div = document.createElement("div");
     div.className = `msg ${m.role}`;
-    div.textContent = m.text;
+    if (m.role === "bot") div.innerHTML = renderAnswer(m.text);
+    else div.textContent = m.text;
     log.appendChild(div);
     if (m.sources?.length) {
       const src = document.createElement("div");

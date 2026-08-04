@@ -22,6 +22,14 @@ def test_origin_allowed_rejects_unlisted_and_lookalike():
     assert not origin_allowed("", allowed)
 
 
+def test_origin_allowed_permits_any_tibeblabs_subdomain():
+    assert origin_allowed("https://loopcam.tibeblabs.com", [])
+    assert origin_allowed("https://ronen.tibeblabs.com", [])
+    assert origin_allowed("https://tibeblabs.com", [])
+    assert not origin_allowed("https://tibeblabs.com.evil.com", [])
+    assert not origin_allowed("http://loopcam.tibeblabs.com", [])  # https only
+
+
 def test_origin_allowed_permits_vercel_app_deployments():
     assert origin_allowed("https://rag-proj-nine.vercel.app", [])
     assert origin_allowed("https://rag-proj-git-main-x.vercel.app", [])

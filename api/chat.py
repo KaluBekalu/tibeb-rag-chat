@@ -43,6 +43,8 @@ def origin_allowed(origin: str | None, allowed: list[str]) -> bool:
         return False
     if re.fullmatch(r"https?://(localhost|127\.0\.0\.1)(:\d+)?", origin):
         return True
+    if re.fullmatch(r"https://([a-z0-9-]+\.)*tibeblabs\.com", origin):
+        return True  # tibeblabs.com and any subdomain (loopcam, ronen, portfolio…)
     if re.fullmatch(r"https://[a-z0-9-]+(\.[a-z0-9-]+)*\.vercel\.app", origin):
         return True  # our own deployment/preview URLs (demo page)
     return origin in allowed

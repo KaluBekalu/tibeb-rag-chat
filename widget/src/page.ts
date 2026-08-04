@@ -4,13 +4,15 @@
  * this is the primary UI at the deployment root.
  */
 
+import { renderAnswer } from "./format";
+
 const API_URL = "/api/chat";
 
 const SUGGESTIONS = [
-  "What products has Tibeb Labs built?",
   "What's Kalkidan's experience with AI and LLMs?",
-  "How does pricing work at Tibeb Labs?",
   "Has Kalkidan worked at large companies?",
+  "What has Kalkidan built and shipped?",
+  "How can I get in touch with Kalkidan?",
 ];
 
 const app = document.getElementById("app") as HTMLDivElement;
@@ -23,8 +25,8 @@ app.innerHTML = `
   <main class="scroll" id="scroll">
     <div class="thread" id="thread">
       <div class="hero" id="hero">
-        <h1>Ask me about <em>Tibeb Labs</em><br>&amp; Kalkidan Aleme</h1>
-        <p>RAG-powered answers grounded in real docs — projects, services, pricing, skills, and experience. Recruiters welcome.</p>
+        <h1>Ask me about <em>Kalkidan Aleme</em></h1>
+        <p>Senior full-stack / product engineer — and founder of Tibeb Labs, his independent studio. RAG-powered answers grounded in his real resume, projects, and products. Recruiters welcome.</p>
         <div class="chips" id="chips"></div>
       </div>
     </div>
@@ -102,7 +104,7 @@ async function ask(question: string): Promise<void> {
     const data = await res.json();
     pending.classList.remove("thinking");
     if (res.ok && data.answer) {
-      pending.textContent = data.answer;
+      pending.innerHTML = renderAnswer(data.answer);
       if (data.sources?.length) {
         const src = document.createElement("div");
         src.className = "sources";

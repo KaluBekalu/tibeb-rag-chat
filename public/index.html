@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tibeb Chat — ask about Tibeb Labs & Kalkidan Aleme</title>
-  <meta name="description" content="A $0 RAG chatbot — ask about Tibeb Labs' projects and Kalkidan Aleme's experience.">
+  <title>Ask about Kalkidan Aleme — RAG chatbot</title>
+  <meta name="description" content="A $0 RAG chatbot — ask about Kalkidan Aleme's experience, skills, and the products he's built at his studio, Tibeb Labs.">
   <style>
     :root {
       --bg: #131019; --panel: #1c1826; --line: #2c2639;
@@ -55,7 +55,15 @@
       color: #fff; display: flex; align-items: center; justify-content: center;
       font-size: 15px; font-weight: 700; margin-top: 2px;
     }
-    .text { line-height: 1.65; font-size: 15px; white-space: pre-wrap; word-wrap: break-word; }
+    .text { line-height: 1.65; font-size: 15px; word-wrap: break-word; }
+    .text p { margin: 0 0 10px; }
+    .text p:last-child, .text ul:last-child { margin-bottom: 0; }
+    .text ul { margin: 2px 0 10px 20px; }
+    .text li { margin-bottom: 4px; }
+    .text a { color: var(--accent-soft); text-underline-offset: 3px; }
+    .text a:hover { color: #a78bfa; }
+    .text strong { color: #fff; }
+    .row.user .text { white-space: pre-wrap; }
     .text.thinking { color: var(--dim); animation: pulse 1.2s ease-in-out infinite; }
     @keyframes pulse { 50% { opacity: .45; } }
     .sources { display: flex; gap: 6px; margin-top: 10px; }
@@ -66,9 +74,9 @@
 
     .composer { padding: 8px 16px 18px; background: linear-gradient(transparent, var(--bg) 30%); }
     .composer form {
-      max-width: 760px; margin: 0 auto; display: flex; align-items: flex-end; gap: 10px;
-      background: var(--panel); border: 1px solid var(--line); border-radius: 22px;
-      padding: 10px 10px 10px 18px; transition: border-color .15s;
+      max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 24px;
+      padding: 8px 8px 8px 18px; transition: border-color .15s;
     }
     .composer form:focus-within { border-color: var(--accent-soft); }
     textarea {
