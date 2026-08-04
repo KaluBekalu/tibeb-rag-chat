@@ -7,7 +7,41 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "api"))
 
 import pytest
 
-from chat import generate_with_fallback, origin_allowed, parse_retry_seconds, validate_question
+from chat import (
+    EmptyAnswer,
+    GEN_MODELS,
+    GROQ_MODEL,
+    gen_chain,
+    generate_with_fallback,
+    origin_allowed,
+    parse_retry_seconds,
+    validate_question,
+)
+
+
+def test_gen_chain_without_groq_key_is_gemini_only():
+    assert gen_chain(groq_key=None) == GEN_MODELS
+    assert gen_chain(groq_key="") == GEN_MODELS
+
+
+def test_gen_chain_with_groq_key_appends_groq_as_last_resort():
+    chain = gen_chain(groq_key="gsk_test")
+    assert chain[:-1] == GEN_MODELS
+    assert chain[-1] == GROQ_MODEL
+
+
+def test_gen_models_contain_no_zero_quota_20_models():
+    # 2.0 models have 0 free-tier quota now (verified in AI Studio dashboard)
+    assert not any(m.startswith("gemini-2.0") for m in GEN_MODELS)
+
+
+def test_generate_with_fallback_falls_through_on_empty_answer():
+    def gen(model):
+        if model == "a":
+            raise EmptyAnswer("a returned no text")
+        return f"ans-{model}"
+
+    assert generate_with_fallback(["a", "b"], gen) == "ans-b"
 
 
 class Boom(Exception):

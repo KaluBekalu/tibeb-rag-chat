@@ -14,10 +14,25 @@ from http.server import BaseHTTPRequestHandler
 sys.path.insert(0, os.path.dirname(__file__))  # allow `_rag` import when loaded as `api.chat`
 from _rag import build_prompt, cosine_topk, load_index  # noqa: E402
 
-# Fallback chain: each model has its own free-tier quota bucket, so bursts
-# that throttle one model (~20 req/min) roll over to the next instead of
-# failing. Only 2.5+ models accept a thinking budget.
-GEN_MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"]
+# Fallback chain: each Gemini model has its own free-tier bucket (~20 req/DAY
+# each as of Aug 2026 — verified in AI Studio; 2.0 models now have zero free
+# quota). Groq (different provider, ~1k req/day) is the last resort and the
+# workhorse once Gemini's daily buckets drain.
+GEN_MODELS = [
+    "gemini-2.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3-flash-preview",
+    "gemini-2.5-flash",
+]
+GROQ_MODEL = "groq/llama-3.3-70b-versatile"
+
+
+def gen_chain(groq_key: str | None) -> list[str]:
+    return GEN_MODELS + [GROQ_MODEL] if groq_key else GEN_MODELS
+
+
+class EmptyAnswer(Exception):
+    """Model returned no usable text (e.g. thinking ate the token budget)."""
 EMBED_MODEL = "gemini-embedding-001"
 EMBED_DIMS = 768
 TOP_K = 8
@@ -69,13 +84,17 @@ def parse_retry_seconds(error_text: str) -> float | None:
 
 
 def generate_with_fallback(models: list[str], generate):
-    """Call generate(model) down the chain; only quota errors fall through."""
+    """Call generate(model) down the chain.
+
+    Quota errors and empty answers fall through to the next model; anything
+    else re-raises immediately.
+    """
     last = None
     for model in models:
         try:
             return generate(model)
         except Exception as e:
-            if not _is_quota_error(e):
+            if not (_is_quota_error(e) or isinstance(e, EmptyAnswer)):
                 raise
             last = e
     raise last
@@ -114,17 +133,55 @@ def _answer(question: str) -> dict:
     retrieved = cosine_topk(query_emb, _INDEX, k=TOP_K)
     prompt = build_prompt(question, retrieved)
 
-    def generate(model: str):
-        config = types.GenerateContentConfig(max_output_tokens=MAX_OUTPUT_TOKENS)
-        if model.startswith("gemini-2.5"):  # 2.0 models reject thinking config
-            config.thinking_config = types.ThinkingConfig(thinking_budget=0)
-        return _CLIENT.models.generate_content(model=model, contents=prompt, config=config)
+    def generate(model: str) -> str:
+        if model == GROQ_MODEL:
+            return _groq_generate(prompt)
+        if model.startswith("gemini-2.5"):
+            thinking = types.ThinkingConfig(thinking_budget=0)
+        else:  # gemini-3.x take a level, not a budget; 'low' is the minimum
+            thinking = types.ThinkingConfig(thinking_level="low")
+        response = _CLIENT.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                max_output_tokens=MAX_OUTPUT_TOKENS, thinking_config=thinking
+            ),
+        )
+        if not (response.text or "").strip():
+            raise EmptyAnswer(model)
+        return response.text
 
-    response = generate_with_fallback(GEN_MODELS, generate)
     return {
-        "answer": response.text,
+        "answer": generate_with_fallback(gen_chain(os.environ.get("GROQ_API_KEY")), generate),
         "sources": sorted({c["source"] for c in retrieved}),
     }
+
+
+def _groq_generate(prompt: str) -> str:
+    """Last-resort generation on Groq's free tier (OpenAI-compatible REST)."""
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(
+        "https://api.groq.com/openai/v1/chat/completions",
+        data=json.dumps({
+            "model": GROQ_MODEL.removeprefix("groq/"),
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": MAX_OUTPUT_TOKENS,
+        }).encode(),
+        headers={
+            "Authorization": f"Bearer {os.environ['GROQ_API_KEY']}",
+            "Content-Type": "application/json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as res:
+            text = json.load(res)["choices"][0]["message"]["content"]
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"groq {e.code}: 429 quota" if e.code == 429 else f"groq {e.code}")
+    if not (text or "").strip():
+        raise EmptyAnswer(GROQ_MODEL)
+    return text
 
 
 class handler(BaseHTTPRequestHandler):
