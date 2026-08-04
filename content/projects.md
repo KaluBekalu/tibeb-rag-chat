@@ -41,4 +41,3 @@ A temporary email service with auto-expiring inboxes.
 ## Team
 
 - **Kalkidan Aleme** — Founder & CEO. Handles all client engagements. 6+ years of production engineering across healthcare, enterprise, and startups.
-- **Oljira Tesfaye** — Co-founder & CMO. Manages growth strategy and brand positioning.
