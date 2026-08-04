@@ -21,10 +21,11 @@ runtime (Vercel free tier)
 ┌────────────┐  POST /api/chat  ┌─────────────┐  embed query   ┌─────────────────┐
 │ widget.js  ├─────────────────►│ api/chat.py ├───────────────►│ gemini-embedding │
 │ (any site) │◄─────────────────┤             │                └─────────────────┘
-└────────────┘  answer+sources  │  in-memory  │  top-4 chunks  ┌─────────────────┐
+└────────────┘  answer+sources  │  in-memory  │  top-8 chunks  ┌─────────────────┐
                                 │  cosine     ├───────────────►│ 2.5-flash-lite  │
-                                │  top-k      │  grounded ask  └─────────────────┘
-                                └─────────────┘
+                                │  top-k      │  grounded ask  │  ↓429 fallback  │
+                                └─────────────┘                │ 2.5 / 2.0 flash │
+                                                               └─────────────────┘
 ```
 
 ## Why no vector database? (a deliberate decision)
@@ -37,8 +38,9 @@ Right-sizing infrastructure is the engineering skill this project demonstrates o
 
 - **MRL truncation + re-normalization.** `gemini-embedding-001` natively outputs 3072 dims; I request 768 via Matryoshka truncation to keep the index small. Truncated vectors are *not* unit-length, so `cosine_topk` re-normalizes before ranking — skipping that silently corrupts results (there's a test that proves it).
 - **Grounding guardrail.** The prompt restricts answers to retrieved context, instructs refusal + a contact suggestion when the context lacks the answer, and tells the model to ignore instructions embedded in questions.
-- **Free-tier protection.** The endpoint enforces a server-side origin allow-list (CORS headers alone don't stop scripts), caps question length, and returns a friendly message when the daily Gemini quota (1,000 req/day on `gemini-2.5-flash-lite`) is exhausted.
-- **Shadow DOM widget.** The chat UI renders in a shadow root, so host-page CSS can't break it and its styles can't leak out. Configurable via `data-` attributes (`data-api`, `data-accent`, `data-title`, `data-greeting`). 4.8 KB minified.
+- **Free-tier protection.** The endpoint enforces a server-side origin allow-list (CORS headers alone don't stop scripts), caps question length, and degrades gracefully with honest messaging when Gemini quotas are hit.
+- **Model fallback chain.** Each Gemini model has its own free-tier quota bucket (~20 req/min each). On a 429, generation falls through `2.5-flash-lite → 2.5-flash → 2.0-flash`, so traffic bursts get absorbed instead of erroring — quota diversity as free redundancy.
+- **Shadow DOM widget.** The chat UI renders in a shadow root, so host-page CSS can't break it and its styles can't leak out. Configurable via `data-` attributes (`data-api`, `data-accent`, `data-title`, `data-greeting`). ~6 KB minified, plus a full-page ChatGPT-style app at the deployment root.
 - **TDD.** The Python core (chunking, retrieval, prompt building, request validation) was built test-first; Gemini calls sit behind thin wrappers so the suite runs with zero network access.
 
 ## Run it locally
